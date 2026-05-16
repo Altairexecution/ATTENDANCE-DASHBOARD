@@ -1,0 +1,78 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function userDoc() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid));
+    }
+
+    function role() {
+      return signedIn() && userDoc().data.role;
+    }
+
+    function isAdmin() {
+      return role() == "admin";
+    }
+
+    function isTeacher() {
+      return role() == "teacher";
+    }
+
+    function ownsTeacherScope() {
+      return isTeacher() && request.resource.data.teacherId == request.auth.uid;
+    }
+
+    match /users/{userId} {
+      allow read: if signedIn() && (isAdmin() || userId == request.auth.uid);
+      allow create, update, delete: if isAdmin();
+    }
+
+    match /students/{studentId} {
+      allow read: if signedIn();
+      allow create, update, delete: if isAdmin();
+    }
+
+    match /teachers/{teacherId} {
+      allow read: if signedIn();
+      allow create, update, delete: if isAdmin();
+    }
+
+    match /departments/{departmentId} {
+      allow read: if signedIn();
+      allow write: if isAdmin();
+    }
+
+    match /classes/{classId} {
+      allow read: if signedIn();
+      allow write: if isAdmin();
+    }
+
+    match /attendance_sessions/{sessionId} {
+      allow read: if signedIn();
+      allow create: if ownsTeacherScope() || isAdmin();
+      allow update: if isAdmin() || (
+        isTeacher()
+        && resource.data.teacherId == request.auth.uid
+        && resource.data.locked == false
+        && request.time < resource.data.createdAt + duration.value(2, "h")
+      );
+      allow delete: if isAdmin();
+    }
+
+    match /attendance_records/{recordId} {
+      allow read: if signedIn();
+      allow create: if isTeacher() || isAdmin();
+      allow update: if isAdmin();
+      allow delete: if isAdmin();
+    }
+
+    match /reports/{reportId} {
+      allow read: if signedIn();
+      allow create: if signedIn();
+      allow update, delete: if isAdmin();
+    }
+  }
+}

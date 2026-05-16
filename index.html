@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#0f172a" />
+    <meta name="description" content="SmartAttend college attendance management dashboard" />
+    <title>SmartAttend</title>
+    <script>
+      (function () {
+        var redirect = sessionStorage.redirect;
+        delete sessionStorage.redirect;
+        if (redirect && redirect !== location.href) {
+          history.replaceState(null, null, redirect);
+        }
+        var query = window.location.search;
+        if (query.startsWith("?/")) {
+          var decoded = query
+            .slice(2)
+            .replace(/~and~/g, "&")
+            .replace(/&$/, "");
+          history.replaceState(null, null, decoded + window.location.hash);
+        }
+      })();
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.jsx"></script>
+  </body>
+</html>
